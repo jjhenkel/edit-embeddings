@@ -2,16 +2,14 @@ import os
 import argparse
 import torch
 from tqdm import tqdm
-import data_loader.data_loaders as module_data
-import model.loss as module_loss
-import model.metric as module_metric
-import model.model as module_arch
+import data_loader as module_loaders
+import models as module_models
 from train import get_instance
 
 
 def main(config, resume):
     # setup data_loader instances
-    data_loader = getattr(module_data, config['data_loader']['type'])(
+    data_loader = getattr(module_loaders, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size=512,
         shuffle=False,
@@ -20,13 +18,15 @@ def main(config, resume):
         num_workers=2
     )
 
-    # build model architecture
-    model = get_instance(module_arch, 'arch', config)
+   # build model architecture
+    module_model = getattr(module_models, config['model']['type'])
+
+    model = get_instance(module_model, 'arch', config['model'])
     model.summary()
 
     # get function handles of loss and metrics
-    loss_fn = getattr(module_loss, config['loss'])
-    metric_fns = [getattr(module_metric, met) for met in config['metrics']]
+    loss_fn = getattr(module_model, config['model']['loss'])
+    metric_fns = [getattr(module_model, met) for met in config['model']['metrics']]
 
     # load state dict
     checkpoint = torch.load(resume)
